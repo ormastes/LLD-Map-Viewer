@@ -38,6 +38,9 @@ export class TreeNode {
         return ''; // default return to satisfy TypeScript
       }
     }
+    public getSizeNumber(): number {
+      return this.size;
+    }
     // get size as string
     public getSize(): string {
       return this.converter(this.size);

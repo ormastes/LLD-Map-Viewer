@@ -57,8 +57,54 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
           TreeNode.currentNumberFormat = message.format;
           webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview, this.root);
           return;
-      }
+        case 'requestChartData':
+          const nodeId = message.nodeId;
+          const chartData = this.getChartData(nodeId);
+          webviewPanel.webview.postMessage({ command: 'displayChart', chartData });
+          break;
+    }
     });
+  }
+  // Helper method to find node by ID
+  private findNodeById(nodeId: string, nodes: TreeNode[]): TreeNode | null {
+    for (const node of nodes) {
+      if (node.id === nodeId) {
+        return node;
+      }
+      const childNode = this.findNodeById(nodeId, node.children);
+      if (childNode) {
+        return childNode;
+      }
+    }
+    return null;
+  }
+  // Method to generate colors for the chart
+  private generateColors(count: number): string[] {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      colors.push(`hsl(${Math.floor((i * 360) / count)}, 70%, 50%)`);
+    }
+    return colors;
+  }
+  // Method to get chart data
+  private getChartData(nodeId: string | null): any {
+    let targetNode: TreeNode;
+    if (nodeId) {
+      targetNode = this.findNodeById(nodeId, this.root.children) || this.root;
+    } else {
+      targetNode = this.root;
+    }
+    const labels = targetNode.children.map(child => child.getSymbol());
+    const data = targetNode.children.map(child => child.getSizeNumber());
+
+    let result = {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: this.generateColors(targetNode.children.length)
+      }]
+    };
+    return result;
   }
 
   private updateWebviewContent(document: vscode.TextDocument, webview: vscode.Webview) {
@@ -189,6 +235,7 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
             <label>
                 <input type="radio" name="numberFormat" value="decimal" ${TreeNode.currentNumberFormat === 'decimal' ? 'checked' : ''}> Decimal
             </label>
+            <button id="openChartButton">Open Pie Chart</button>
         </div>
         <table id="productTable">
           <thead>
@@ -205,6 +252,12 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
             ${tableRows}
           </tbody>
         </table>
+        <!-- Container for the chart -->
+        <div id="chartContainer" style="display: none;">
+          <canvas id="pieChart" width="400" height="400"></canvas>
+          <button id="closeChartButton">Close Chart</button>
+        </div>
+        <script nonce="${nonce}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>
       </html>

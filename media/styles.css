@@ -1,32 +1,86 @@
 /* styles.css */
-  body {
-    padding: 10px;
-  }
-  
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  thead {
-    background-color: #f0f0f0;
-  }
-  
-  td, th {
-    border: 1px solid #ccc;
-    padding: 4px;
-  }
-  
-  button#switchButton {
-    margin-bottom: 10px;
-  }
-  
-  .expander {
-    cursor: pointer;
-    margin-right: 5px;
-  }
-  
-  tr.collapsed + tr {
-    display: none;
-  }
-  
+body {
+  padding: 10px;
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  color: #000; /* Set text color to solid black */
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+thead {
+  background-color: #007bff;
+  color: #000;
+  font-weight: bold; /* Make header text bold */
+  text-transform: uppercase; /* Transform header text to uppercase */
+  letter-spacing: 1px; /* Add letter spacing for better readability */
+}
+
+td, th {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+button#switchButton {
+  margin-bottom: 10px;
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button#switchButton:hover {
+  background-color: #0056b3;
+}
+
+.expander {
+  cursor: pointer;
+  margin-right: 5px;
+  color: #007bff;
+}
+
+expander:hover {
+  color: #0056b3;
+}
+
+tr.collapsed + tr {
+  display: none;
+}
+
+/* Highlight selected row */
+.selected {
+  background-color: #cce5ff;
+}
+
+/* Style the chart container */
+#chartContainer {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border: 2px solid #000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 400px;
+  height: 400px;
+  border-radius: 8px;
+}
+
+/* Ensure the canvas fills the container */
+#pieChart {
+  width: 100% !important;
+  height: 100% !important;
+}
