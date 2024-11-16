@@ -1,17 +1,26 @@
 // MapFileEditor.ts
 import * as vscode from 'vscode';
 import { TreeNode } from './TreeNode';
+import assert from 'assert';
 
 export class MapFileEditor implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'lldMapView.editor';
+  private root: TreeNode;
 
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = new MapFileEditor(context);
-    const providerRegistration = vscode.window.registerCustomEditorProvider(MapFileEditor.viewType, provider);
+    const providerRegistration = vscode.window.registerCustomEditorProvider(
+      MapFileEditor.viewType,
+      provider
+    );
     return providerRegistration;
   }
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.root = new TreeNode('', '', '', '', '', -1);
+    this.root.id = 'root';
+    this.root.expanded = true;
+   }
 
   public async resolveCustomTextEditor(
     document: vscode.TextDocument,
@@ -44,6 +53,10 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
         case 'switchToText':
           vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
           return;
+        case 'numberFormatChanged':
+          TreeNode.currentNumberFormat = message.format;
+          webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview, this.root);
+          return;
       }
     });
   }
@@ -53,24 +66,81 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
     webview.html = this.getHtmlForWebview(webview, data);
   }
 
-  private parseMapFile(text: string): TreeNode[] {
+  private parseBySpace(text: string): [string[], number[]] {
+    let data: string[] = [];
+    let spaceList: number[] = [];
+    let space = 0;
+    let curText = '';
+    let idx = 0;
+    while (idx < text.length) {
+      while ((text[idx] === ' ' || text[idx] === '\t') && idx < text.length) {
+        space += 1;
+        idx += 1;
+      }
+      while (text[idx] !== ' ' && text[idx] !== '\n' && text[idx] !== '\r' && idx < text.length) {
+        if (text[idx] !== '<' && text[idx] !== '>') {
+          curText += text[idx];
+        }
+        idx += 1;
+      }
+      while ((text[idx] === '\n' || text[idx] === '\r') && idx < text.length) {
+        idx += 1;
+      }
+      data.push(curText);
+      spaceList.push(space);
+      space = 0;
+      curText = '';
+    }
+    return [data, spaceList];
+  }
+
+  private parseMapFile(text: string): TreeNode {
     const lines = text.split('\n');
-    const rootNodes: TreeNode[] = [];
+    const rootNodes: TreeNode[] = this.root.children;
     const stack: { indent: number; node: TreeNode }[] = [];
 
-    for (const line of lines) {
-      if (line.trim() === '') continue; // Skip empty lines
+    const [labels, base_spaces] = this.parseBySpace(lines[0]);
+    const label_loc_map: { [key: string]: number } = {
+      'VMA': 0, 'LMA': 1, 'Size': 2, 'Align': 3, 'Symbol': 6
+    };
+    let base_indent = -1;
+    let tab_indent = -1;
+    // check label location
+    for (let i = 0; i < Object.keys(label_loc_map).length; i++) {
+      // ignore case
+      const defined_label = Object.keys(label_loc_map)[i];
+      const defined_idx = label_loc_map[defined_label];
+      if (labels[defined_idx].toLowerCase() !== defined_label.toLowerCase()) {
+        // vscode extension error message
+        vscode.window.showErrorMessage(`Map file format error: ${labels[defined_idx]} should be ${defined_label}`);
+      }
+    }
 
-      const indentMatch = line.match(/^(\s*)/);
-      const indent = indentMatch ? indentMatch[1].length : 0;
-      const content = line.trim();
+    // skip the first line
+    const content = lines.slice(1);
 
-      // Parse the line into columns
-      const columns = content.split(/\s+/);
-      const [vma, lma, size, align, ...symbolParts] = columns;
-      const symbol = symbolParts.join(' ');
+    for (const line of content) {
+      if (line.trim() === '') {
+        continue; // Skip empty lines
+      }
+      const [data, spaces] = this.parseBySpace(line);
+      const indent = spaces[(label_loc_map['Symbol'] >= data.length) ? data.length - 1 : label_loc_map['Symbol']];
+      assert(indent >= 0, 'Indent should be non-negative');
 
-      const node = new TreeNode(symbol, size, align, vma, lma, indent);
+      if (base_indent === -1) {
+        base_indent = indent;
+      }
+      if (base_indent !== indent) {
+        tab_indent = indent - base_indent;
+      }
+      const tab = (tab_indent === -1) ? 0 : (indent - base_indent) / tab_indent;
+      const symbol = data[(label_loc_map['Symbol'] >= data.length) ? data.length - 1 : label_loc_map['Symbol']];
+      const size = data[label_loc_map['Size']];
+      const align = data[label_loc_map['Align']];
+      const vma = data[label_loc_map['VMA']];
+      const lma = data[label_loc_map['LMA']];
+
+      const node = new TreeNode(symbol, size, align, vma, lma, tab);
 
       while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
         stack.pop();
@@ -85,10 +155,10 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
       stack.push({ indent, node });
     }
 
-    return rootNodes;
+    return this.root;
   }
 
-  private getHtmlForWebview(webview: vscode.Webview, data: TreeNode[]): string {
+  private getHtmlForWebview(webview: vscode.Webview, data: TreeNode): string {
     const nonce = getNonce();
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'main.js')
@@ -98,22 +168,29 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
     );
 
     // Generate the tree table rows
-    const tableRows = this.generateTableRows(data);
-
-    return /* html */ `
+    const tableRows = this.generateTableRows(data, data.children);
+    //log html
+    const html = `
       <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
-        <meta http-equiv="Content-Security-Policy"
-          content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="${styleUri}" rel="stylesheet">
         <title>LLD Map View</title>
       </head>
       <body>
-        <button id="switchButton">Switch to Text Editor</button>
-        <table>
+        <div>
+          <button id="switchButton">Switch to Text Editor</button>
+            <label>
+                <input type="radio" name="numberFormat" value="hex" ${TreeNode.currentNumberFormat === 'hex' ? 'checked' : ''}> Hex
+            </label>
+            <label>
+                <input type="radio" name="numberFormat" value="decimal" ${TreeNode.currentNumberFormat === 'decimal' ? 'checked' : ''}> Decimal
+            </label>
+        </div>
+        <table id="productTable">
           <thead>
             <tr>
               <th>Symbol</th>
@@ -122,6 +199,7 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
               <th>VMA</th>
               <th>LMA</th>
             </tr>
+            <tr hidden data-node-id="${data.id}" parent=""></tr>
           </thead>
           <tbody>
             ${tableRows}
@@ -131,26 +209,30 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
       </body>
       </html>
     `;
+    return html;
   }
 
-  private generateTableRows(nodes: TreeNode[], level: number = 0): string {
+  private generateTableRows(parent: TreeNode | null, nodes: TreeNode[], level: number = 0, hidden: boolean = false): string {
     return nodes
       .map((node) => {
         const indent = level * 20;
         const hasChildren = node.children.length > 0;
+        // Determine if the current node should be hidden
+        const styleDisplay = hidden ? 'style="display:none;"' : '';
         const row = `
-          <tr data-level="${level}" class="treegrid-${node.id}" ${hasChildren ? `data-expander="true"` : ''}>
-            <td style="padding-left: ${indent}px;">
-              ${hasChildren ? `<span class="expander">▶</span>` : ''}
-              ${node.symbol}
-            </td>
-            <td>${node.size}</td>
-            <td>${node.align}</td>
-            <td>${node.vma}</td>
-            <td>${node.lma}</td>
-          </tr>
-          ${this.generateTableRows(node.children, level + 1)}
-        `;
+                <tr data-level="${level}" data-node-id="${node.id}" data-parent-id="${parent ? parent.id : ''}" class="" ${styleDisplay} collapsed="true" ${hasChildren ? `data-expander="true"` : ''}>
+                    <td style="padding-left: ${indent}px; white-space: nowrap;">
+                        ${node.getIndentString()}
+                        ${hasChildren ? `<span class="expander">${node.expanded ? '▼' : '▶'}</span>` : ''}
+                        ${node.getSymbol()}
+                    </td>
+                    <td align="right">${node.getSize()}</td>
+                    <td align="right">${node.getAlign()}</td>
+                    <td align="right">${node.getVma()}</td>
+                    <td align="right">${node.getLma()}</td>
+                </tr>
+                ${this.generateTableRows(node, node.children, level + 1, true)}
+            `;
         return row;
       })
       .join('');

@@ -5,21 +5,25 @@ import { MapFileEditor } from './MapFileEditor';
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(MapFileEditor.register(context));
 
-  const openWithMapView = vscode.commands.registerCommand(
-    'lldMapViewer.openWithMapView',
-    () => {
-      const { activeTextEditor } = vscode.window;
-      if (activeTextEditor) {
-        vscode.commands.executeCommand(
-          'vscode.openWith',
-          activeTextEditor.document.uri,
-          MapFileEditor.viewType
-        );
-      }
+  const openWithText = vscode.commands.registerCommand('lldMapView.openWithText', () => {
+    const { activeTextEditor } = vscode.window;
+    if (activeTextEditor) {
+      vscode.commands.executeCommand('vscode.openWith', activeTextEditor.document.uri, 'default');
     }
-  );
+  });
 
-  context.subscriptions.push(openWithMapView);
+  const openWithMapView = vscode.commands.registerCommand('lldMapView.openWithMapView', () => {
+    const { activeTextEditor } = vscode.window;
+    if (activeTextEditor) {
+      vscode.commands.executeCommand(
+        'vscode.openWith',
+        activeTextEditor.document.uri,
+        MapFileEditor.viewType
+      );
+    }
+  });
+
+  context.subscriptions.push(openWithText, openWithMapView);
 }
 
 export function deactivate() {}
