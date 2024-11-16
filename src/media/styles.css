@@ -1,0 +1,32 @@
+/* styles.css */
+  body {
+    padding: 10px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  thead {
+    background-color: #f0f0f0;
+  }
+  
+  td, th {
+    border: 1px solid #ccc;
+    padding: 4px;
+  }
+  
+  button#switchButton {
+    margin-bottom: 10px;
+  }
+  
+  .expander {
+    cursor: pointer;
+    margin-right: 5px;
+  }
+  
+  tr.collapsed + tr {
+    display: none;
+  }
+  
