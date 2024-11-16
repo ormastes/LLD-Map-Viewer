@@ -2,14 +2,13 @@
   "name": "lld-map-viewer",
   "displayName": "LLD Map Viewer",
   "description": "A VSCode extension to view Clang LLD map files in a tree table view.",
-  "version": "1.0.0",
-  "publisher": "your-publisher-name",
+  "version": "1.1.0",
+  "publisher": "Yoon, Jonghyun",
   "engines": {
     "vscode": "^1.60.0"
   },
   "activationEvents": [
-    "onLanguage:plaintext",
-    "onCustomEditor:lldMapView.editor"
+    "onLanguage:plaintext"
   ],
   "main": "./out/extension.js",
   "contributes": {

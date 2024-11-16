@@ -235,7 +235,7 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
             <label>
                 <input type="radio" name="numberFormat" value="decimal" ${TreeNode.currentNumberFormat === 'decimal' ? 'checked' : ''}> Decimal
             </label>
-            <button id="openChartButton">Open Pie Chart</button>
+            <!--<button id="openChartButton">Open Pie Chart</button>-->
         </div>
         <table id="productTable">
           <thead>
