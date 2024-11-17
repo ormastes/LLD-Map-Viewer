@@ -3,7 +3,11 @@
   "displayName": "LLD Map Viewer",
   "description": "A VSCode extension to view Clang LLD map files in a tree table view.",
   "version": "1.1.0",
-  "publisher": "Yoon, Jonghyun",
+  "publisher": "ormastes",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ormastes/LLD-Map-Viewer"
+  },
   "engines": {
     "vscode": "^1.60.0"
   },
