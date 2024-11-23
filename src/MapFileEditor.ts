@@ -5,7 +5,7 @@ import assert from 'assert';
 
 export class MapFileEditor implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'lldMapView.editor';
-  private root: TreeNode;
+  private rootMap: Map<vscode.Uri, TreeNode> = new Map();
 
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = new MapFileEditor(context);
@@ -17,9 +17,6 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
   }
 
   constructor(private readonly context: vscode.ExtensionContext) {
-    this.root = new TreeNode('', '', '', '', '', -1);
-    this.root.id = 'root';
-    this.root.expanded = true;
    }
 
   public async resolveCustomTextEditor(
@@ -33,7 +30,7 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
     };
 
     // Initial content load
-    this.updateWebviewContent(document, webviewPanel.webview);
+    const root = this.updateWebviewContent(document, webviewPanel.webview);
 
     // Listen for document changes
     const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
@@ -55,11 +52,11 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
           return;
         case 'numberFormatChanged':
           TreeNode.currentNumberFormat = message.format;
-          webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview, this.root);
+          webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview, root);
           return;
         case 'requestChartData':
           const nodeId = message.nodeId;
-          const chartData = this.getChartData(nodeId);
+          const chartData = this.getChartData(root, nodeId);
           webviewPanel.webview.postMessage({ command: 'displayChart', chartData });
           break;
     }
@@ -87,12 +84,12 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
     return colors;
   }
   // Method to get chart data
-  private getChartData(nodeId: string | null): any {
+  private getChartData(root: TreeNode, nodeId: string | null): any {
     let targetNode: TreeNode;
     if (nodeId) {
-      targetNode = this.findNodeById(nodeId, this.root.children) || this.root;
+      targetNode = this.findNodeById(nodeId, root.children) || root;
     } else {
-      targetNode = this.root;
+      targetNode = root;
     }
     const labels = targetNode.children.map(child => child.getSymbol());
     const data = targetNode.children.map(child => child.getSizeNumber());
@@ -107,12 +104,17 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
     return result;
   }
 
-  private updateWebviewContent(document: vscode.TextDocument, webview: vscode.Webview) {
-    const data = this.parseMapFile(document.getText());
-    webview.html = this.getHtmlForWebview(webview, data);
+  private updateWebviewContent(document: vscode.TextDocument, webview: vscode.Webview) : TreeNode{
+    const root = new TreeNode('', '', '', '', '', -1);
+    root.id = 'root';
+    root.expanded = true;
+    this.rootMap.set(document.uri, root);
+    this.parseMapFile(root, document.getText());
+    webview.html = this.getHtmlForWebview(webview, root);
+    return root;
   }
 
-  private parseBySpace(text: string): [string[], number[]] {
+  private parseBySpace(text: string, max_idx: number): [string[], number[]] {
     let data: string[] = [];
     let spaceList: number[] = [];
     let space = 0;
@@ -123,7 +125,7 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
         space += 1;
         idx += 1;
       }
-      while (text[idx] !== ' ' && text[idx] !== '\n' && text[idx] !== '\r' && idx < text.length) {
+      while ((data.length == max_idx+1 || text[idx] !== ' ') && text[idx] !== '\n' && text[idx] !== '\r' && idx < text.length) {
         if (text[idx] !== '<' && text[idx] !== '>') {
           curText += text[idx];
         }
@@ -140,15 +142,15 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
     return [data, spaceList];
   }
 
-  private parseMapFile(text: string): TreeNode {
+  private parseMapFile(root: TreeNode, text: string) {
     const lines = text.split('\n');
-    const rootNodes: TreeNode[] = this.root.children;
+    const rootNodes: TreeNode[] = root.children;
     const stack: { indent: number; node: TreeNode }[] = [];
-
-    const [labels, base_spaces] = this.parseBySpace(lines[0]);
     const label_loc_map: { [key: string]: number } = {
       'VMA': 0, 'LMA': 1, 'Size': 2, 'Align': 3, 'Symbol': 6
     };
+    const [labels, base_spaces] = this.parseBySpace(lines[0], label_loc_map['Symbol']);
+    
     let base_indent = -1;
     let tab_indent = -1;
     // check label location
@@ -169,7 +171,7 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
       if (line.trim() === '') {
         continue; // Skip empty lines
       }
-      const [data, spaces] = this.parseBySpace(line);
+      const [data, spaces] = this.parseBySpace(line, label_loc_map['Align']);
       const indent = spaces[(label_loc_map['Symbol'] >= data.length) ? data.length - 1 : label_loc_map['Symbol']];
       assert(indent >= 0, 'Indent should be non-negative');
 
@@ -186,6 +188,10 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
       const vma = data[label_loc_map['VMA']];
       const lma = data[label_loc_map['LMA']];
 
+      if (symbol.trim() === '') {
+        continue; // Skip empty symbols
+      }
+
       const node = new TreeNode(symbol, size, align, vma, lma, tab);
 
       while (stack.length > 0 && indent <= stack[stack.length - 1].indent) {
@@ -200,8 +206,6 @@ export class MapFileEditor implements vscode.CustomTextEditorProvider {
 
       stack.push({ indent, node });
     }
-
-    return this.root;
   }
 
   private getHtmlForWebview(webview: vscode.Webview, data: TreeNode): string {

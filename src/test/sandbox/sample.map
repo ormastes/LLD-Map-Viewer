@@ -1,4 +1,6 @@
              VMA              LMA     Size Align Out     In      Symbol
+      212400           212400     b7b7    16 .rodata
+      2172ec           2172ec       18     4         build64_release/cpputil/json/libjson.a (json_params.cpp.o):(.rodata._ZNK9rapidjson12GenericValueINS_4UTF8IcEENS_12CrtAllocatorEE6AcceptINS_6WriterINS_19GenericStringBufferIS2_S3_EES2_S2_S3_EEEEbRT_)
       2002a8           2002a8       1d     1 .interp
       2002a8           2002a8       1d     1         <internal>:(.interp)
       2002c8           2002c8       20     4 .note.ABI-tag
@@ -19,6 +21,7 @@
       2064b8           2064b8     9d50     8         <internal>:(.rela.dyn)
       210208           210208     21f0     8 .rela.plt
       210208           210208     21f0     8         <internal>:(.rela.plt)
+      210208           210208     21f0     8 
       212400           212400     b7b7    16 .rodata
       212400           212400        8     4         <internal>:(.rodata)
       212410           212410      262    16         build64_release/version.cpp.o:(.rodata)
@@ -33,6 +36,6 @@
       212671           212671        1     1                 kScmVersion
       212680           212680       80    16         <internal>:(.rodata)
       212700           212700     4bea     1         <internal>:(.rodata)
-      2172ec           2172ec       18     4         build64_release/cpputil/json/libjson.a(json_params.cpp.o):(.rodata._ZNK9rapidjson12GenericValueINS_4UTF8IcEENS_12CrtAllocatorEE6AcceptINS_6WriterINS_19GenericStringBufferIS2_S3_EES2_S2_S3_EEEEbRT_)
+      2172ec           2172ec       18     4         build64_release/cpputil/json/libjson.a (json_params.cpp.o):(.rodata._ZNK9rapidjson12GenericValueINS_4UTF8IcEENS_12CrtAllocatorEE6AcceptINS_6WriterINS_19GenericStringBufferIS2_S3_EES2_S2_S3_EEEEbRT_)
       217304           217304       18     4         build64_release/cpputil/json/libjson.a(json_params.cpp.o):(.rodata._ZNK9rapidjson12GenericValueINS_4UTF8IcEENS_12CrtAllocatorEE6AcceptINS_12PrettyWriterINS_15FileWriteStreamES2_S2_S3_EEEEbRT_)
       21731c           21731c       84     4         build64_release/cpputil/json/libjson.a(json_params.cpp.o):(.rodata._ZN9rapidjson13GenericReaderINS_4UTF8IcEES2_NS_12CrtAllocatorEE10ParseValueILj0ENS_19GenericStringStreamIS2_EENS_19GenericDocumentLiteIS2_S3_S3_EEEEvRT0_RT1_)

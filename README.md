@@ -36,4 +36,6 @@ Initial release of lld-map-viewer with tree table view and number format switchi
 - Added support for hexadecimal and decimal number format switching.
 - Improved tree table performance and responsiveness.
 
+### 1.2.0
 
+- Fix empty symbol showing problem.

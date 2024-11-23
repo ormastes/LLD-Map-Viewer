@@ -46,9 +46,10 @@
 
       const childExpander = childRow.querySelector('.expander');
       const childRowId = childRow.getAttribute('data-node-id');
+      const childHide = hide || true;
 
       if (childExpander) {
-        if (hide) {
+        if (childHide) {
           if (!childRow.classList.contains('collapsed')) {
             childRow.classList.add('collapsed');
             childExpander.textContent = '▶';
@@ -62,7 +63,7 @@
       }
 
       // Recursively toggle child rows
-      toggleChildRows(childRowId, hide);
+      toggleChildRows(childRowId, childHide);
     });
   }
 
